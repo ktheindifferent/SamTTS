@@ -1,256 +1,223 @@
-# <img src="https://raw.githubusercontent.com/coqui-ai/TTS/main/images/coqui-log-green-TTS.png" height="56"/>
+# SamTTS - Multi-Backend Offline Text-to-Speech API
 
-🐸TTS is a library for advanced Text-to-Speech generation. It's built on the latest research, was designed to achieve the best trade-off among ease-of-training, speed and quality.
-🐸TTS comes with pretrained models, tools for measuring dataset quality and already used in **20+ languages** for products and research projects.
+A unified HTTP REST API providing access to multiple offline Text-to-Speech (TTS) engines through a single interface. Built on top of 🐸Coqui TTS and other leading TTS technologies.
 
-[![Gitter](https://badges.gitter.im/coqui-ai/TTS.svg)](https://gitter.im/coqui-ai/TTS?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-[![License](<https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg>)](https://opensource.org/licenses/MPL-2.0)
-[![PyPI version](https://badge.fury.io/py/TTS.svg)](https://badge.fury.io/py/TTS)
-[![Covenant](https://camo.githubusercontent.com/7d620efaa3eac1c5b060ece5d6aacfcc8b81a74a04d05cd0398689c01c4463bb/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f436f6e7472696275746f72253230436f76656e616e742d76322e3025323061646f707465642d6666363962342e737667)](https://github.com/coqui-ai/TTS/blob/master/CODE_OF_CONDUCT.md)
-[![Downloads](https://pepy.tech/badge/tts)](https://pepy.tech/project/tts)
-[![DOI](https://zenodo.org/badge/265612440.svg)](https://zenodo.org/badge/latestdoi/265612440)
+## 🚀 Features
 
-![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/aux_tests.yml/badge.svg)
-![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/data_tests.yml/badge.svg)
-![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/docker.yaml/badge.svg)
-![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/inference_tests.yml/badge.svg)
-![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/style_check.yml/badge.svg)
-![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/text_tests.yml/badge.svg)
-![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/tts_tests.yml/badge.svg)
-![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/vocoder_tests.yml/badge.svg)
-![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/zoo_tests.yml/badge.svg)
-[![Docs](<https://readthedocs.org/projects/tts/badge/?version=latest&style=plastic>)](https://tts.readthedocs.io/en/latest/)
+- **Unified API** - Single HTTP interface for multiple TTS backends
+- **Offline Operation** - No internet connectivity required
+- **Multiple Engines** - Support for Coqui TTS, eSpeak, eSpeak-NG, MaryTTS, pyttsx3, and Festival
+- **Auto-Detection** - Automatic detection of available TTS engines
+- **Streaming & Batch** - Real-time streaming and batch synthesis support
+- **Voice & Language Support** - Multiple voices and languages per backend
+- **Adjustable Parameters** - Control speed, pitch, and other speech parameters
 
-🚀 [**Sign up to free 🐸Coqui.ai API and start cloning your voice**](https://coqui.ai/)
+## 🎯 Quick Start
 
-📰 [**Subscribe to 🐸Coqui.ai Newsletter**](https://coqui.ai/?subscription=true)
+### Start the API Server
+```bash
+cd multi_tts_api
+python -m uvicorn api:app --host 0.0.0.0 --port 8000
+```
 
-📢 [English Voice Samples](https://erogol.github.io/ddc-samples/) and [SoundCloud playlist](https://soundcloud.com/user-565970875/pocket-article-wavernn-and-tacotron2)
+### Synthesize Speech
+```bash
+curl -X POST http://localhost:8000/synthesize \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Hello world", "backend": "espeak"}' \
+  --output speech.wav
+```
 
-📄 [Text-to-Speech paper collection](https://github.com/erogol/TTS-papers)
+## 📋 Supported TTS Backends
 
-<img src="https://static.scarf.sh/a.png?x-pxid=cf317fe7-2188-4721-bc01-124bb5d5dbb2" />
+| Backend | Quality | Speed | Languages | Features |
+|---------|---------|-------|-----------|----------|
+| **Coqui TTS** | Excellent | Medium | 20+ | Neural models, voice cloning |
+| **eSpeak** | Fair | Very Fast | 50+ | Lightweight, reliable |
+| **eSpeak-NG** | Good | Very Fast | 100+ | Improved quality |
+| **MaryTTS** | Good | Medium | Multiple | Modular, customizable |
+| **pyttsx3** | Varies | Fast | Varies | Cross-platform wrapper |
+| **Festival** | Good | Medium | Multiple | Highly configurable |
 
-## 💬 Where to ask questions
-Please use our dedicated channels for questions and discussion. Help is much more valuable if it's shared publicly so that more people can benefit from it.
+## 📖 API Documentation
 
-| Type                            | Platforms                               |
-| ------------------------------- | --------------------------------------- |
-| 🚨 **Bug Reports**              | [GitHub Issue Tracker]                  |
-| 🎁 **Feature Requests & Ideas** | [GitHub Issue Tracker]                  |
-| 👩‍💻 **Usage Questions**          | [Github Discussions]                    |
-| 🗯 **General Discussion**       | [Github Discussions] or [Gitter Room]   |
+### Core Endpoints
 
-[github issue tracker]: https://github.com/coqui-ai/tts/issues
-[github discussions]: https://github.com/coqui-ai/TTS/discussions
-[gitter room]: https://gitter.im/coqui-ai/TTS?utm_source=share-link&utm_medium=link&utm_campaign=share-link
-[Tutorials and Examples]: https://github.com/coqui-ai/TTS/wiki/TTS-Notebooks-and-Tutorials
+#### List Available Backends
+```bash
+GET /backends
+```
 
+#### Get Backend Information
+```bash
+GET /backends/{backend_id}
+```
 
-## 🔗 Links and Resources
-| Type                            | Links                               |
-| ------------------------------- | --------------------------------------- |
-| 💼 **Documentation**              | [ReadTheDocs](https://tts.readthedocs.io/en/latest/)
-| 💾 **Installation**               | [TTS/README.md](https://github.com/coqui-ai/TTS/tree/dev#install-tts)|
-| 👩‍💻 **Contributing**               | [CONTRIBUTING.md](https://github.com/coqui-ai/TTS/blob/main/CONTRIBUTING.md)|
-| 📌 **Road Map**                   | [Main Development Plans](https://github.com/coqui-ai/TTS/issues/378)
-| 🚀 **Released Models**            | [TTS Releases](https://github.com/coqui-ai/TTS/releases) and [Experimental Models](https://github.com/coqui-ai/TTS/wiki/Experimental-Released-Models)|
+#### Synthesize Speech
+```bash
+POST /synthesize
+Content-Type: application/json
 
-## 🥇 TTS Performance
-<p align="center"><img src="https://raw.githubusercontent.com/coqui-ai/TTS/main/images/TTS-performance.png" width="800" /></p>
+{
+  "text": "Hello, this is a test",
+  "backend": "espeak",
+  "language": "en",
+  "speed": 1.0,
+  "pitch": 1.0,
+  "format": "wav"
+}
+```
 
-Underlined "TTS*" and "Judy*" are 🐸TTS models
-<!-- [Details...](https://github.com/coqui-ai/TTS/wiki/Mean-Opinion-Score-Results) -->
+#### Streaming Synthesis
+```bash
+POST /synthesize/stream
+```
 
-## Features
-- High-performance Deep Learning models for Text2Speech tasks.
-    - Text2Spec models (Tacotron, Tacotron2, Glow-TTS, SpeedySpeech).
-    - Speaker Encoder to compute speaker embeddings efficiently.
-    - Vocoder models (MelGAN, Multiband-MelGAN, GAN-TTS, ParallelWaveGAN, WaveGrad, WaveRNN)
-- Fast and efficient model training.
-- Detailed training logs on the terminal and Tensorboard.
-- Support for Multi-speaker TTS.
-- Efficient, flexible, lightweight but feature complete `Trainer API`.
-- Released and ready-to-use models.
-- Tools to curate Text2Speech datasets under```dataset_analysis```.
-- Utilities to use and test your models.
-- Modular (but not too much) code base enabling easy implementation of new ideas.
+#### Batch Synthesis
+```bash
+POST /synthesize/batch
+```
 
-## Implemented Models
-### Spectrogram models
-- Tacotron: [paper](https://arxiv.org/abs/1703.10135)
-- Tacotron2: [paper](https://arxiv.org/abs/1712.05884)
-- Glow-TTS: [paper](https://arxiv.org/abs/2005.11129)
-- Speedy-Speech: [paper](https://arxiv.org/abs/2008.03802)
-- Align-TTS: [paper](https://arxiv.org/abs/2003.01950)
-- FastPitch: [paper](https://arxiv.org/pdf/2006.06873.pdf)
-- FastSpeech: [paper](https://arxiv.org/abs/1905.09263)
-- SC-GlowTTS: [paper](https://arxiv.org/abs/2104.05557)
-- Capacitron: [paper](https://arxiv.org/abs/1906.03402)
+For detailed API documentation, see [`multi_tts_api/README.md`](multi_tts_api/README.md).
 
-### End-to-End Models
-- VITS: [paper](https://arxiv.org/pdf/2106.06103)
-- YourTTS: [paper](https://arxiv.org/abs/2112.02418)
+## 🛠️ Installation
 
-### Attention Methods
-- Guided Attention: [paper](https://arxiv.org/abs/1710.08969)
-- Forward Backward Decoding: [paper](https://arxiv.org/abs/1907.09006)
-- Graves Attention: [paper](https://arxiv.org/abs/1910.10288)
-- Double Decoder Consistency: [blog](https://erogol.com/solving-attention-problems-of-tts-models-with-double-decoder-consistency/)
-- Dynamic Convolutional Attention: [paper](https://arxiv.org/pdf/1910.10288.pdf)
-- Alignment Network: [paper](https://arxiv.org/abs/2108.10447)
+### Prerequisites
 
-### Speaker Encoder
-- GE2E: [paper](https://arxiv.org/abs/1710.10467)
-- Angular Loss: [paper](https://arxiv.org/pdf/2003.11982.pdf)
-
-### Vocoders
-- MelGAN: [paper](https://arxiv.org/abs/1910.06711)
-- MultiBandMelGAN: [paper](https://arxiv.org/abs/2005.05106)
-- ParallelWaveGAN: [paper](https://arxiv.org/abs/1910.11480)
-- GAN-TTS discriminators: [paper](https://arxiv.org/abs/1909.11646)
-- WaveRNN: [origin](https://github.com/fatchord/WaveRNN/)
-- WaveGrad: [paper](https://arxiv.org/abs/2009.00713)
-- HiFiGAN: [paper](https://arxiv.org/abs/2010.05646)
-- UnivNet: [paper](https://arxiv.org/abs/2106.07889)
-
-You can also help us implement more models.
-
-## Install TTS
-🐸TTS is tested on Ubuntu 18.04 with **python >= 3.7, < 3.11.**.
-
-If you are only interested in [synthesizing speech](https://tts.readthedocs.io/en/latest/inference.html) with the released 🐸TTS models, installing from PyPI is the easiest option.
+Install system dependencies for the TTS backends you want to use:
 
 ```bash
-pip install TTS
+# For eSpeak
+sudo apt-get install espeak
+
+# For eSpeak-NG  
+sudo apt-get install espeak-ng
+
+# For Festival
+sudo apt-get install festival
+
+# For MaryTTS (requires Java)
+sudo apt-get install default-jre
 ```
 
-If you plan to code or train models, clone 🐸TTS and install it locally.
+### Python Dependencies
 
 ```bash
-git clone https://github.com/coqui-ai/TTS
-pip install -e .[all,dev,notebooks]  # Select the relevant extras
+# Clone the repository
+git clone [your-repo-url]
+cd SamTTS
+
+# Install Python dependencies
+cd multi_tts_api
+pip install -r requirements.txt
 ```
 
-If you are on Ubuntu (Debian), you can also run following commands for installation.
+## 🎭 Backend Details
 
+### Coqui TTS
+Based on the original 🐸TTS library with support for:
+- High-performance Deep Learning models (Tacotron2, Glow-TTS, VITS, YourTTS)
+- Neural vocoders (HiFiGAN, MelGAN, WaveRNN)
+- Multi-speaker synthesis and voice cloning
+- 20+ languages with pretrained models
+
+### Other Backends
+- **eSpeak/eSpeak-NG**: Lightweight, rule-based synthesis
+- **MaryTTS**: Modular Java-based platform
+- **pyttsx3**: Cross-platform TTS wrapper
+- **Festival**: Configurable speech synthesis system
+
+## 💻 Usage Examples
+
+### Python Client
+```python
+import requests
+
+# Start the API server first
+# python -m uvicorn multi_tts_api.api:app --host 0.0.0.0 --port 8000
+
+base_url = "http://localhost:8000"
+
+# List available backends
+response = requests.get(f"{base_url}/backends")
+backends = response.json()
+print("Available backends:", backends)
+
+# Synthesize with eSpeak
+tts_request = {
+    "text": "Hello from SamTTS!",
+    "backend": "espeak",
+    "language": "en",
+    "speed": 1.2
+}
+
+response = requests.post(f"{base_url}/synthesize", json=tts_request)
+with open("output.wav", "wb") as f:
+    f.write(response.content)
+```
+
+### Command Line Interface
 ```bash
-$ make system-deps  # intended to be used on Ubuntu (Debian). Let us know if you have a different OS.
-$ make install
+# List available backends
+curl http://localhost:8000/backends
+
+# Synthesize speech with different backends
+curl -X POST http://localhost:8000/synthesize \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Fast synthesis", "backend": "espeak"}' \
+  --output fast.wav
+
+curl -X POST http://localhost:8000/synthesize \
+  -H "Content-Type: application/json" \
+  -d '{"text": "High quality synthesis", "backend": "coqui"}' \
+  --output quality.wav
+
+# Batch synthesis
+curl -X POST http://localhost:8000/synthesize/batch \
+  -H "Content-Type: application/json" \
+  -d '[
+    {"text": "First sentence", "backend": "espeak"},
+    {"text": "Second sentence", "backend": "festival"}
+  ]' \
+  --output batch.zip
 ```
 
-If you are on Windows, 👑@GuyPaddock wrote installation instructions [here](https://stackoverflow.com/questions/66726331/how-can-i-run-mozilla-tts-coqui-tts-training-with-cuda-on-a-windows-system).
-
-## Use TTS
-
-### Single Speaker Models
-
-- List provided models:
-
-    ```
-    $ tts --list_models
-    ```
-- Get model info (for both tts_models and vocoder_models):
-    - Query by type/name:
-        The model_info_by_name uses the name as it from the --list_models.
-        ```
-        $ tts --model_info_by_name "<model_type>/<language>/<dataset>/<model_name>"
-        ```
-        For example:
-
-        ```
-        $ tts --model_info_by_name tts_models/tr/common-voice/glow-tts
-        ```
-        ```
-        $ tts --model_info_by_name vocoder_models/en/ljspeech/hifigan_v2
-        ```
-    - Query by type/idx:
-        The model_query_idx uses the corresponding idx from --list_models.
-        ```
-        $ tts --model_info_by_idx "<model_type>/<model_query_idx>"
-        ```
-        For example:
-
-        ```
-        $ tts --model_info_by_idx tts_models/3
-        ```
-
-- Run TTS with default models:
-
-    ```
-    $ tts --text "Text for TTS" --out_path output/path/speech.wav
-    ```
-
-- Run a TTS model with its default vocoder model:
-
-    ```
-    $ tts --text "Text for TTS" --model_name "<model_type>/<language>/<dataset>/<model_name>" --out_path output/path/speech.wav
-    ```
-  For example:
-
-    ```
-    $ tts --text "Text for TTS" --model_name "tts_models/en/ljspeech/glow-tts" --out_path output/path/speech.wav
-    ```
-
-- Run with specific TTS and vocoder models from the list:
-
-    ```
-    $ tts --text "Text for TTS" --model_name "<model_type>/<language>/<dataset>/<model_name>" --vocoder_name "<model_type>/<language>/<dataset>/<model_name>" --out_path output/path/speech.wav
-    ```
-
-  For example:
-
-    ```
-    $ tts --text "Text for TTS" --model_name "tts_models/en/ljspeech/glow-tts" --vocoder_name "vocoder_models/en/ljspeech/univnet" --out_path output/path/speech.wav
-    ```
-
-
-- Run your own TTS model (Using Griffin-Lim Vocoder):
-
-    ```
-    $ tts --text "Text for TTS" --model_path path/to/model.pth --config_path path/to/config.json --out_path output/path/speech.wav
-    ```
-
-- Run your own TTS and Vocoder models:
-    ```
-    $ tts --text "Text for TTS" --model_path path/to/config.json --config_path path/to/model.pth --out_path output/path/speech.wav
-        --vocoder_path path/to/vocoder.pth --vocoder_config_path path/to/vocoder_config.json
-    ```
-
-### Multi-speaker Models
-
-- List the available speakers and choose as <speaker_id> among them:
-
-    ```
-    $ tts --model_name "<language>/<dataset>/<model_name>"  --list_speaker_idxs
-    ```
-
-- Run the multi-speaker TTS model with the target speaker ID:
-
-    ```
-    $ tts --text "Text for TTS." --out_path output/path/speech.wav --model_name "<language>/<dataset>/<model_name>"  --speaker_idx <speaker_id>
-    ```
-
-- Run your own multi-speaker TTS model:
-
-    ```
-    $ tts --text "Text for TTS" --out_path output/path/speech.wav --model_path path/to/config.json --config_path path/to/model.pth --speakers_file_path path/to/speaker.json --speaker_idx <speaker_id>
-    ```
-
-## Directory Structure
+## 📁 Project Structure
 ```
-|- notebooks/       (Jupyter Notebooks for model evaluation, parameter selection and data analysis.)
-|- utils/           (common utilities.)
-|- TTS
-    |- bin/             (folder for all the executables.)
-      |- train*.py                  (train your target model.)
-      |- ...
-    |- tts/             (text to speech models)
-        |- layers/          (model layer definitions)
-        |- models/          (model definitions)
-        |- utils/           (model specific utilities.)
-    |- speaker_encoder/ (Speaker Encoder models.)
-        |- (same)
-    |- vocoder/         (Vocoder models.)
-        |- (same)
+├── multi_tts_api/           # Main API application
+│   ├── api.py              # FastAPI application and endpoints
+│   ├── backend_manager.py  # Backend management and orchestration
+│   ├── backends/           # TTS backend implementations
+│   │   ├── base.py        # Abstract base class for backends
+│   │   ├── coqui.py       # Coqui TTS backend
+│   │   ├── espeak.py      # eSpeak backend
+│   │   ├── espeak_ng.py   # eSpeak-NG backend
+│   │   ├── festival.py    # Festival backend
+│   │   ├── marytts.py     # MaryTTS backend
+│   │   └── pyttsx3.py     # pyttsx3 backend
+│   ├── requirements.txt    # Python dependencies
+│   ├── run_server.py      # Server startup script
+│   ├── test_api.py        # API test suite
+│   └── README.md          # Detailed API documentation
+├── TTS/                    # Original Coqui TTS library
+└── README.md              # This file
 ```
+
+## 🤝 Contributing
+
+Contributions are welcome! Areas for improvement:
+- New TTS backend implementations
+- Performance optimizations
+- Additional audio format support
+- Better error handling and logging
+- Extended language support
+
+## 📄 License
+
+This project builds upon multiple open-source TTS libraries:
+- **Coqui TTS**: Mozilla Public License 2.0
+- **eSpeak/eSpeak-NG**: GPL v3  
+- **MaryTTS**: LGPL v3
+- **Festival**: Custom license
+
+See individual backend documentation for specific license requirements.
