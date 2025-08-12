@@ -1,0 +1,94 @@
+captainVersion: 4
+services:
+  $$cap_appname:
+    image: $$cap_image_name
+    restart: always
+    ports:
+      - "$$cap_tts_port:5002"
+    environment:
+      TTS_MODEL_NAME: $$cap_model_name
+      TTS_VOCODER_NAME: $$cap_vocoder_name
+      TTS_SERVER_PORT: 5002
+    volumes:
+      - $$cap_appname-models:/app/tts_models
+    caproverExtra:
+      containerHttpPort: '5002'
+      notExposeAsWebApp: 'false'
+
+caproverOneClickApp:
+  variables:
+    - id: $$cap_image_name
+      label: Docker Image
+      defaultValue: 'ghcr.io/coqui-ai/tts:latest'
+      description: Docker image for TTS service
+      validRegex: /^([a-z0-9\-\.]+\/)*[a-z0-9\-\.]+:[a-z0-9\-\.]+$/
+    
+    - id: $$cap_tts_port
+      label: TTS Server Port
+      defaultValue: '5002'
+      description: Port to expose TTS server on
+      validRegex: /^[0-9]+$/
+    
+    - id: $$cap_model_name
+      label: TTS Model Name
+      defaultValue: 'tts_models/en/ljspeech/tacotron2-DDC'
+      description: Default TTS model to load
+      
+    - id: $$cap_vocoder_name
+      label: Vocoder Model Name (optional)
+      defaultValue: ''
+      description: Optional vocoder model to use with TTS model
+      
+  instructions:
+    start: |-
+      🐸 **Coqui TTS Server** - Deep learning toolkit for Text-to-Speech
+      
+      This one-click app deploys a TTS server with web interface and API endpoints.
+      
+      **Features:**
+      - Multi-language TTS support
+      - Multiple TTS models (Tacotron2, GlowTTS, VITS, etc.)
+      - Voice cloning capabilities
+      - REST API for integration
+      - Web interface for testing
+      - Multi-backend offline TTS API support
+      
+    end: |-
+      🎉 **TTS Server deployed successfully!**
+      
+      **Access your TTS server:**
+      - Web UI: `http://$$cap_appname.$$cap_root_domain`
+      - API endpoint: `http://$$cap_appname.$$cap_root_domain/api/tts`
+      - Multi TTS API: `http://$$cap_appname.$$cap_root_domain/multi_tts_api/`
+      
+      **API Usage Examples:**
+      ```bash
+      # Synthesize speech
+      curl -X GET "http://$$cap_appname.$$cap_root_domain/api/tts?text=Hello%20World"
+      
+      # Multi-backend TTS API
+      curl -X POST "http://$$cap_appname.$$cap_root_domain/multi_tts_api/synthesize" \
+           -H "Content-Type: application/json" \
+           -d '{"text": "Hello World", "backend_id": "coqui"}'
+      ```
+      
+      **Available TTS Models:**
+      - English: `tts_models/en/ljspeech/tacotron2-DDC`
+      - German: `tts_models/de/thorsten/tacotron2-DDC`
+      - French: `tts_models/fr/mai/tacotron2-DDC`
+      - And many more!
+      
+      **Configuration:**
+      - Model data is persisted in volume: `$$cap_appname-models`
+      - Server runs on port: `$$cap_tts_port`
+      - Default model: `$$cap_model_name`
+      
+      For more information, visit: https://github.com/coqui-ai/TTS
+
+  displayName: 🐸 Coqui TTS Server
+  isOfficial: false
+  description: |-
+    Deep learning toolkit for Text-to-Speech with multi-language support, voice cloning, and modern neural architectures.
+    
+    Features include multiple TTS backends, voice cloning, multi-language support, and both web UI and REST API access.
+  documentation: https://tts.readthedocs.io/

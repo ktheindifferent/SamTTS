@@ -1,0 +1,27 @@
+# Core dependencies
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.4.2
+python-multipart==0.0.6
+
+# TTS Backends  
+# TTS - will be installed from the main package
+pyttsx3==2.90  # Offline TTS wrapper (includes espeak, sapi5, nsss)
+py-espeak-ng==0.1.8  # eSpeak-NG Python bindings
+gTTS==2.4.0  # Google TTS (for comparison, can work offline with caching)
+pydub==0.25.1  # Audio processing
+soundfile==0.12.1  # Audio file handling
+
+# Additional dependencies (compatible with main TTS requirements)
+numpy>=1.21.6  # Compatible with main TTS requirements
+scipy>=1.4.0  # Compatible with main TTS requirements  
+torch>=1.7  # Compatible with main TTS requirements
+torchaudio  # Compatible with main TTS requirements
+librosa>=0.8.0  # Compatible with main TTS requirements
+wave
+pyaudio==0.2.13  # For audio playback (optional)
+
+# Development dependencies
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.1  # For testing API endpoints

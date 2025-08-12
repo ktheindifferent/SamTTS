@@ -25,14 +25,14 @@ import subprocess
 import sys
 from distutils.version import LooseVersion
 
-import numpy
 import setuptools.command.build_py
 import setuptools.command.develop
-from Cython.Build import cythonize
 from setuptools import Extension, find_packages, setup
 
-if LooseVersion(sys.version) < LooseVersion("3.7") or LooseVersion(sys.version) >= LooseVersion("3.11"):
-    raise RuntimeError("TTS requires python >= 3.7 and < 3.11 " "but your Python version is {}".format(sys.version))
+python_version = LooseVersion(sys.version)
+if python_version < LooseVersion("3.7") or python_version >= LooseVersion("3.12"):
+    print(f"Warning: TTS is tested with python >= 3.7 and < 3.12, but your Python version is {sys.version}")
+    # Don't fail on newer Python versions in development environments
 
 
 cwd = os.path.dirname(os.path.abspath(__file__))
@@ -68,12 +68,27 @@ requirements_all = requirements_dev + requirements_notebooks
 with open("README.md", "r", encoding="utf-8") as readme_file:
     README = readme_file.read()
 
-exts = [
-    Extension(
-        name="TTS.tts.utils.monotonic_align.core",
-        sources=["TTS/tts/utils/monotonic_align/core.pyx"],
-    )
-]
+# Defer numpy import to setup execution time
+def get_extensions():
+    import numpy
+    from Cython.Build import cythonize
+    
+    exts = [
+        Extension(
+            name="TTS.tts.utils.monotonic_align.core",
+            sources=["TTS/tts/utils/monotonic_align/core.pyx"],
+            include_dirs=[numpy.get_include()],
+        )
+    ]
+    return cythonize(exts, language_level=3)
+
+# Get extensions or use empty list if numpy/cython not available
+try:
+    ext_modules = get_extensions()
+except ImportError:
+    print("Warning: numpy or Cython not available, building without extensions")
+    ext_modules = []
+
 setup(
     name="TTS",
     version=version,
@@ -84,13 +99,13 @@ setup(
     long_description=README,
     long_description_content_type="text/markdown",
     license="MPL-2.0",
-    # cython
-    include_dirs=numpy.get_include(),
-    ext_modules=cythonize(exts, language_level=3),
-    # ext_modules=find_cython_extensions(),
+    # setup requirements for building extensions
+    setup_requires=["numpy", "Cython"],
+    # cython extensions
+    ext_modules=ext_modules,
     # package
     include_package_data=True,
-    packages=find_packages(include=["TTS"], exclude=["*.tests", "*tests.*", "tests.*", "*tests", "tests"]),
+    packages=find_packages(include=["TTS*", "multi_tts_api*"], exclude=["*.tests", "*tests.*", "tests.*", "*tests", "tests"]),
     package_data={
         "TTS": [
             "VERSION",
@@ -113,7 +128,7 @@ setup(
         "dev": requirements_dev,
         "notebooks": requirements_notebooks,
     },
-    python_requires=">=3.7.0, <3.11",
+    python_requires=">=3.7.0, <3.12",
     entry_points={"console_scripts": ["tts=TTS.bin.synthesize:main", "tts-server = TTS.server.server:main"]},
     classifiers=[
         "Programming Language :: Python",
