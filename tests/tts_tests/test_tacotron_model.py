@@ -53,7 +53,7 @@ class TacotronTrainTest(unittest.TestCase):
 
         criterion = L1LossMasked(seq_len_norm=False).to(device)
         criterion_st = nn.BCEWithLogitsLoss().to(device)
-        model = Tacotron(config).to(device)  # FIXME: missing num_speakers parameter to Tacotron ctor
+        model = Tacotron(config).to(device)
         model.train()
         print(" > Num parameters for Tacotron model:%s" % (count_parameters(model)))
         model_ref = copy.deepcopy(model)
@@ -107,7 +107,7 @@ class MultiSpeakeTacotronTrainTest(unittest.TestCase):
         criterion = L1LossMasked(seq_len_norm=False).to(device)
         criterion_st = nn.BCEWithLogitsLoss().to(device)
         config.d_vector_dim = 55
-        model = Tacotron(config).to(device)  # FIXME: missing num_speakers parameter to Tacotron ctor
+        model = Tacotron(config).to(device)
         model.train()
         print(" > Num parameters for Tacotron model:%s" % (count_parameters(model)))
         model_ref = copy.deepcopy(model)
@@ -166,7 +166,7 @@ class TacotronGSTTrainTest(unittest.TestCase):
         criterion_st = nn.BCEWithLogitsLoss().to(device)
         config.use_gst = True
         config.gst = GSTConfig()
-        model = Tacotron(config).to(device)  # FIXME: missing num_speakers parameter to Tacotron ctor
+        model = Tacotron(config).to(device)
         model.train()
         # print(model)
         print(" > Num parameters for Tacotron GST model:%s" % (count_parameters(model)))
@@ -218,7 +218,7 @@ class TacotronGSTTrainTest(unittest.TestCase):
 
         criterion = L1LossMasked(seq_len_norm=False).to(device)
         criterion_st = nn.BCEWithLogitsLoss().to(device)
-        model = Tacotron(config).to(device)  # FIXME: missing num_speakers parameter to Tacotron ctor
+        model = Tacotron(config).to(device)
         model.train()
         # print(model)
         print(" > Num parameters for Tacotron GST model:%s" % (count_parameters(model)))
@@ -344,7 +344,7 @@ class SCGSTMultiSpeakeTacotronTrainTest(unittest.TestCase):
         criterion = L1LossMasked(seq_len_norm=False).to(device)
         criterion_st = nn.BCEWithLogitsLoss().to(device)
         config.d_vector_dim = 55
-        model = Tacotron(config).to(device)  # FIXME: missing num_speakers parameter to Tacotron ctor
+        model = Tacotron(config).to(device)
         model.train()
         print(" > Num parameters for Tacotron model:%s" % (count_parameters(model)))
         model_ref = copy.deepcopy(model)
@@ -375,3 +375,144 @@ class SCGSTMultiSpeakeTacotronTrainTest(unittest.TestCase):
                 count, param.shape, param, param_ref
             )
             count += 1
+
+
+class MultiSpeakerFunctionalityTest(unittest.TestCase):
+    """Comprehensive tests for multi-speaker functionality in Tacotron model."""
+    
+    @staticmethod
+    def test_speaker_embedding_initialization():
+        """Test that speaker embeddings are correctly initialized for multi-speaker models."""
+        config = TacotronConfig(
+            num_chars=32,
+            num_speakers=8,
+            use_speaker_embedding=True,
+            out_channels=513,
+            decoder_output_dim=80
+        )
+        model = Tacotron(config).to(device)
+        
+        # Verify num_speakers is correctly set
+        assert model.num_speakers == 8, f"Expected num_speakers=8, got {model.num_speakers}"
+        
+        # Verify speaker embedding layer exists and has correct dimensions
+        assert hasattr(model, 'speaker_embedding'), "Model should have speaker_embedding attribute"
+        assert model.speaker_embedding is not None, "Speaker embedding should not be None"
+        assert model.speaker_embedding.num_embeddings == 8, \
+            f"Expected 8 speaker embeddings, got {model.speaker_embedding.num_embeddings}"
+        
+        print(" > Speaker embedding initialization test passed")
+    
+    @staticmethod
+    def test_single_vs_multi_speaker_models():
+        """Test differences between single-speaker and multi-speaker model configurations."""
+        # Single speaker configuration
+        config_single = TacotronConfig(
+            num_chars=32,
+            num_speakers=1,
+            use_speaker_embedding=False,
+            out_channels=513,
+            decoder_output_dim=80
+        )
+        model_single = Tacotron(config_single).to(device)
+        
+        # Multi-speaker configuration
+        config_multi = TacotronConfig(
+            num_chars=32,
+            num_speakers=5,
+            use_speaker_embedding=True,
+            out_channels=513,
+            decoder_output_dim=80
+        )
+        model_multi = Tacotron(config_multi).to(device)
+        
+        # Verify single speaker model doesn't have speaker embeddings
+        assert model_single.num_speakers == 1
+        assert model_single.speaker_embedding is None, \
+            "Single speaker model should not have speaker embeddings"
+        
+        # Verify multi-speaker model has speaker embeddings
+        assert model_multi.num_speakers == 5
+        assert model_multi.speaker_embedding is not None, \
+            "Multi-speaker model should have speaker embeddings"
+        assert model_multi.speaker_embedding.num_embeddings == 5
+        
+        # Verify decoder input dimensions are different
+        assert model_multi.decoder_in_features > model_single.decoder_in_features, \
+            "Multi-speaker model should have larger decoder input features"
+        
+        print(" > Single vs multi-speaker model test passed")
+    
+    @staticmethod
+    def test_speaker_id_forward_pass():
+        """Test forward pass with different speaker IDs."""
+        config = TacotronConfig(
+            num_chars=32,
+            num_speakers=5,
+            use_speaker_embedding=True,
+            out_channels=513,
+            decoder_output_dim=80
+        )
+        model = Tacotron(config).to(device)
+        model.eval()
+        
+        # Prepare inputs
+        batch_size = 4
+        text_input = torch.randint(0, 24, (batch_size, 50)).long().to(device)
+        text_lengths = torch.tensor([50, 45, 40, 35]).long().to(device)
+        mel_spec = torch.rand(batch_size, 30, config.audio["num_mels"]).to(device)
+        mel_lengths = torch.tensor([30, 28, 25, 22]).long().to(device)
+        
+        # Test with different speaker IDs
+        for speaker_id in range(5):
+            speaker_ids = torch.full((batch_size,), speaker_id, dtype=torch.long).to(device)
+            
+            with torch.no_grad():
+                outputs = model.forward(
+                    text_input, text_lengths, mel_spec, mel_lengths,
+                    aux_input={"speaker_ids": speaker_ids}
+                )
+            
+            assert "model_outputs" in outputs, f"Missing model_outputs for speaker {speaker_id}"
+            assert outputs["model_outputs"].shape[0] == batch_size
+            
+        print(" > Speaker ID forward pass test passed")
+    
+    @staticmethod  
+    def test_d_vector_configuration():
+        """Test Tacotron with d-vector based multi-speaker configuration."""
+        config = TacotronConfig(
+            num_chars=32,
+            num_speakers=10,
+            use_speaker_embedding=False,
+            use_d_vector_file=True,
+            d_vector_dim=256,
+            out_channels=513,
+            decoder_output_dim=80
+        )
+        model = Tacotron(config).to(device)
+        model.eval()
+        
+        # Verify configuration
+        assert model.num_speakers == 10
+        assert model.embedded_speaker_dim == 256
+        assert model.speaker_embedding is None, "Should not have speaker embeddings with d-vectors"
+        
+        # Test forward pass with d-vectors
+        batch_size = 2
+        text_input = torch.randint(0, 24, (batch_size, 30)).long().to(device)
+        text_lengths = torch.tensor([30, 25]).long().to(device)
+        mel_spec = torch.rand(batch_size, 20, config.audio["num_mels"]).to(device)
+        mel_lengths = torch.tensor([20, 18]).long().to(device)
+        d_vectors = torch.rand(batch_size, 256).to(device)
+        
+        with torch.no_grad():
+            outputs = model.forward(
+                text_input, text_lengths, mel_spec, mel_lengths,
+                aux_input={"d_vectors": d_vectors}
+            )
+        
+        assert "model_outputs" in outputs
+        assert outputs["model_outputs"].shape[0] == batch_size
+        
+        print(" > D-vector configuration test passed")
