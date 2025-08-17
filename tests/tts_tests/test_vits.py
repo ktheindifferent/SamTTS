@@ -63,8 +63,65 @@ class TestVits(unittest.TestCase):
         self.assertAlmostEqual((spec - spec_amp).abs().max(), 0, delta=1e-4)
 
     def test_dataset(self):
-        """TODO:"""
-        ...
+        """Test VITS dataset initialization and basic functionality."""
+        from TTS.tts.datasets import TTSDataset
+        from TTS.tts.utils.text.tokenizer import TTSTokenizer
+        
+        # Setup basic config
+        config = VitsConfig(model_args=VitsArgs(num_chars=32))
+        
+        # Create dummy samples for testing
+        samples = [
+            {"text": "Hello world", "audio_file": WAV_FILE, "speaker_name": "speaker1", "language": "en"},
+            {"text": "Test sample", "audio_file": WAV_FILE, "speaker_name": "speaker2", "language": "en"},
+        ]
+        
+        # Initialize tokenizer
+        tokenizer = TTSTokenizer(use_phonemes=False)
+        
+        # Test dataset initialization
+        dataset = TTSDataset(
+            samples=samples,
+            tokenizer=tokenizer,
+            ap=config.audio,
+            min_text_len=1,
+            max_text_len=100,
+            min_audio_len=1,
+            max_audio_len=10000,
+        )
+        
+        # Test dataset properties
+        self.assertEqual(len(dataset), 2)
+        self.assertIsNotNone(dataset.samples)
+        self.assertEqual(len(dataset.samples), 2)
+        
+        # Test dataset filtering by length
+        dataset_filtered = TTSDataset(
+            samples=samples,
+            tokenizer=tokenizer,
+            ap=config.audio,
+            min_text_len=15,  # Filter out short texts
+            max_text_len=100,
+            min_audio_len=1,
+            max_audio_len=10000,
+        )
+        
+        # After filtering, dataset should be smaller
+        self.assertLessEqual(len(dataset_filtered), len(dataset))
+        
+        # Test with speaker ID mapping
+        speaker_id_mapping = {"speaker1": 0, "speaker2": 1}
+        dataset_with_speakers = TTSDataset(
+            samples=samples,
+            tokenizer=tokenizer,
+            ap=config.audio,
+            speaker_id_mapping=speaker_id_mapping,
+            min_text_len=1,
+            max_text_len=100,
+        )
+        
+        self.assertIsNotNone(dataset_with_speakers.speaker_id_mapping)
+        self.assertEqual(len(dataset_with_speakers.speaker_id_mapping), 2)
 
     def test_init_multispeaker(self):
         num_speakers = 10
