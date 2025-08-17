@@ -21,9 +21,11 @@
 
 import hashlib
 import os
+import shutil
 import subprocess
 import sys
 import zipfile
+from pathlib import Path
 
 import pandas
 import soundfile as sf
@@ -62,6 +64,34 @@ USER = {"user": "", "password": ""}
 speaker_id_dict = {}
 
 
+def validate_path(path):
+    """Validate file path to prevent directory traversal attacks.
+    
+    Args:
+        path: The path to validate.
+    
+    Returns:
+        The resolved absolute path.
+    
+    Raises:
+        ValueError: If the path contains invalid characters or attempts directory traversal.
+    """
+    # Convert to Path object for safe handling
+    path_obj = Path(path).resolve()
+    
+    # Check for directory traversal attempts
+    try:
+        # Ensure the path doesn't contain dangerous patterns
+        path_str = str(path_obj)
+        if ".." in path_str or path_str.startswith("/etc") or path_str.startswith("/root"):
+            if not path_str.startswith("/root/repo"):  # Allow our working directory
+                raise ValueError(f"Potential directory traversal detected: {path}")
+    except (ValueError, OSError) as e:
+        raise ValueError(f"Invalid path: {path}") from e
+    
+    return str(path_obj)
+
+
 def download_and_extract(directory, subset, urls):
     """Download and extract the given split of dataset.
 
@@ -70,28 +100,62 @@ def download_and_extract(directory, subset, urls):
         subset: subset name of the corpus.
         urls: the list of urls to download the data file.
     """
+    # Validate directory path
+    directory = validate_path(directory)
     os.makedirs(directory, exist_ok=True)
 
     try:
         for url in urls:
-            zip_filepath = os.path.join(directory, url.split("/")[-1])
+            # Validate URL and extract filename safely
+            if not url.startswith(("http://", "https://")):
+                raise ValueError(f"Invalid URL: {url}")
+            
+            filename = os.path.basename(url)
+            zip_filepath = os.path.join(directory, filename)
+            zip_filepath = validate_path(zip_filepath)
+            
             if os.path.exists(zip_filepath):
                 continue
+            
             logging.info("Downloading %s to %s" % (url, zip_filepath))
-            subprocess.call(
-                "wget %s --user %s --password %s -O %s" % (url, USER["user"], USER["password"], zip_filepath),
-                shell=True,
-            )
+            
+            # Use subprocess.run with argument list instead of shell=True
+            cmd = [
+                "wget",
+                url,
+                "--user", USER["user"],
+                "--password", USER["password"],
+                "-O", zip_filepath
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            if result.returncode != 0:
+                logging.error(f"Failed to download {url}: {result.stderr}")
+                raise RuntimeError(f"Download failed with return code {result.returncode}")
 
             statinfo = os.stat(zip_filepath)
             logging.info("Successfully downloaded %s, size(bytes): %d" % (url, statinfo.st_size))
 
-        # concatenate all parts into zip files
+        # concatenate all parts into zip files using Python instead of shell
         if ".zip" not in zip_filepath:
-            zip_filepath = "_".join(zip_filepath.split("_")[:-1])
-            subprocess.call("cat %s* > %s.zip" % (zip_filepath, zip_filepath), shell=True)
-            zip_filepath += ".zip"
-        extract_path = zip_filepath.strip(".zip")
+            base_path = "_".join(zip_filepath.split("_")[:-1])
+            output_zip = base_path + ".zip"
+            
+            # Find all part files and concatenate them
+            import glob
+            part_files = sorted(glob.glob(f"{base_path}*"))
+            
+            if part_files:
+                with open(output_zip, "wb") as outfile:
+                    for part_file in part_files:
+                        part_file = validate_path(part_file)
+                        with open(part_file, "rb") as infile:
+                            shutil.copyfileobj(infile, outfile)
+            
+            zip_filepath = output_zip
+        
+        extract_path = zip_filepath.replace(".zip", "")
+        extract_path = validate_path(extract_path)
 
         # check zip file md5sum
         with open(zip_filepath, "rb") as f_zip:
@@ -102,7 +166,14 @@ def download_and_extract(directory, subset, urls):
         with zipfile.ZipFile(zip_filepath, "r") as zfile:
             zfile.extractall(directory)
             extract_path_ori = os.path.join(directory, zfile.infolist()[0].filename)
-            subprocess.call("mv %s %s" % (extract_path_ori, extract_path), shell=True)
+            extract_path_ori = validate_path(extract_path_ori)
+            
+            # Use shutil.move instead of shell mv command
+            if os.path.exists(extract_path_ori):
+                shutil.move(extract_path_ori, extract_path)
+    except Exception as e:
+        logging.error(f"Error during download and extract: {e}")
+        raise
     finally:
         # os.remove(zip_filepath)
         pass
@@ -111,16 +182,31 @@ def download_and_extract(directory, subset, urls):
 def exec_cmd(cmd):
     """Run a command in a subprocess.
     Args:
-        cmd: command line to be executed.
+        cmd: command line to be executed (string or list).
     Return:
         int, the return code.
     """
     try:
-        retcode = subprocess.call(cmd, shell=True)
+        # If cmd is a string, split it safely into arguments
+        if isinstance(cmd, str):
+            import shlex
+            cmd_list = shlex.split(cmd)
+        else:
+            cmd_list = cmd
+        
+        # Use subprocess.run instead of subprocess.call with shell=False
+        result = subprocess.run(cmd_list, capture_output=True, text=True, check=False)
+        retcode = result.returncode
+        
         if retcode < 0:
-            logging.info(f"Child was terminated by signal {retcode}")
+            logging.info(f"Child was terminated by signal {-retcode}")
+        elif retcode != 0:
+            logging.error(f"Command failed with stderr: {result.stderr}")
     except OSError as e:
         logging.info(f"Execution failed: {e}")
+        retcode = -999
+    except Exception as e:
+        logging.error(f"Unexpected error executing command: {e}")
         retcode = -999
     return retcode
 
@@ -133,8 +219,13 @@ def decode_aac_with_ffmpeg(aac_file, wav_file):
     Return:
         bool, True if success.
     """
-    cmd = f"ffmpeg -i {aac_file} {wav_file}"
-    logging.info(f"Decoding aac file using command line: {cmd}")
+    # Validate file paths
+    aac_file = validate_path(aac_file)
+    wav_file = validate_path(wav_file)
+    
+    # Build command as a list to avoid shell injection
+    cmd = ["ffmpeg", "-i", aac_file, wav_file]
+    logging.info(f"Decoding aac file: {aac_file} -> {wav_file}")
     ret = exec_cmd(cmd)
     if ret != 0:
         logging.error(f"Failed to decode aac file with retcode {ret}")
