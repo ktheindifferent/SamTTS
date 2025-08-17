@@ -192,8 +192,59 @@ class TestZH_CN_Phonemizer(unittest.TestCase):
         self._TEST_CASES = ""
 
     def test_phonemize(self):
-        # TODO: implement ZH phonemizer tests
-        pass
+        """Test Chinese phonemization with various inputs."""
+        # Test basic Chinese text phonemization
+        test_cases = [
+            # (input, expected_contains)
+            ("你好", ["n", "i", "3", "h", "ɑ", "o", "3"]),  # "ni hao" in phonemes
+            ("中国", ["d", "ʒ", "o", "ŋ", "1", "g", "u", "o", "2"]),  # "zhong guo"
+            ("我爱你", ["w", "o", "3", "a", "i", "4", "n", "i", "3"]),  # "wo ai ni"
+            ("测试", ["t", "s", "ø", "4", "ʂ", "ʏ", "4"]),  # "ce shi"
+            ("一二三", ["i", "1", "ø", "r", "4", "s", "a", "n", "1"]),  # "yi er san"
+        ]
+        
+        for text, expected_phonemes in test_cases:
+            result = self.phonemizer.phonemize(text, separator="|")
+            # Check that key phonemes are present
+            for phoneme in expected_phonemes:
+                self.assertIn(phoneme, result, f"Expected phoneme '{phoneme}' not found in result for '{text}'")
+        
+        # Test with punctuation (should be preserved if keep_puncs=True)
+        self.phonemizer.keep_puncs = True
+        text_with_punct = "你好，世界！"
+        result_with_punct = self.phonemizer.phonemize(text_with_punct, separator="|")
+        self.assertIn("，", result_with_punct)
+        self.assertIn("！", result_with_punct)
+        
+        # Test with punctuation removed (keep_puncs=False)
+        self.phonemizer.keep_puncs = False
+        result_no_punct = self.phonemizer.phonemize(text_with_punct, separator="|")
+        self.assertNotIn("，", result_no_punct)
+        self.assertNotIn("！", result_no_punct)
+        
+        # Test empty string
+        empty_result = self.phonemizer.phonemize("", separator="|")
+        self.assertEqual(empty_result, "")
+        
+        # Test with mixed Chinese and punctuation
+        mixed_text = "这是，样本中文。"
+        mixed_result = self.phonemizer.phonemize(mixed_text, separator="|")
+        # Should contain phonemes for all Chinese characters
+        self.assertIn("d", mixed_result)  # from "这"
+        self.assertIn("ʂ", mixed_result)  # from "是"
+        
+        # Test with numbers (Chinese numbers should be phonemized)
+        number_text = "一个人"
+        number_result = self.phonemizer.phonemize(number_text, separator="|")
+        self.assertIn("i", number_result)  # from "一"
+        self.assertIn("g", number_result)  # from "个"
+        self.assertIn("r", number_result)  # from "人"
+        
+        # Test separator functionality
+        test_sep = " "
+        sep_result = self.phonemizer.phonemize("你好", separator=test_sep)
+        self.assertNotIn("|", sep_result)
+        self.assertIn(" ", sep_result)
 
     def test_name(self):
         self.assertEqual(self.phonemizer.name(), "zh_cn_phonemizer")
