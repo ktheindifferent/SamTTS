@@ -41,8 +41,9 @@ def segment_test():
 
     try:
         segments = segment(x, segment_ids, segment_size=10)
-        raise Exception("Should have failed")
-    except:
+        raise Exception("segment() should have raised an exception for segment_size > tensor size")
+    except (IndexError, RuntimeError, AssertionError) as e:
+        # Expected: segment function should fail when segment_size exceeds tensor dimensions
         pass
 
     segments = segment(x, segment_ids, segment_size=10, pad_short=True)
@@ -58,8 +59,9 @@ def rand_segments_test():
     assert all(seg_idxs >= 0), seg_idxs
     try:
         segments, _ = rand_segments(x, x_lens, segment_size=5)
-        raise Exception("Should have failed")
-    except:
+        raise Exception("rand_segments() should have raised an AssertionError for segment_size > sample length")
+    except AssertionError as e:
+        # Expected: rand_segments raises AssertionError when segment_size exceeds sample length
         pass
     x_lens_back = x_lens.clone()
     segments, seg_idxs = rand_segments(x, x_lens.clone(), segment_size=5, pad_short=True, let_short_samples=True)
